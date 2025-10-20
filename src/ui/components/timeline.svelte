@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Moment } from "moment";
+  import type { LocalTask } from "../../task-types";
   import { get } from "svelte/store";
   import { isNotVoid } from "typed-assert";
 
@@ -14,6 +15,7 @@
   import { minutesToMomentOfDay } from "../../util/moment";
   import { getRenderKey } from "../../util/task-utils";
   import { createGestures } from "../actions/gestures";
+  import { createTimeBlockMenu } from "../time-block-menu";
 
   import Column from "./column.svelte";
   import LocalTimeBlock from "./local-time-block.svelte";
@@ -37,7 +39,56 @@
     pointerDateTime,
     getDisplayedTasksWithClocksForTimeline,
     settingsSignal,
+    workspaceFacade,
   } = getObsidianContext();
+
+  type LocalTaskWithLocation = LocalTask & {
+    location: {
+      path: string;
+      position: { start: { line: number } };
+    };
+  };
+
+  function hasTaskLocation<T extends LocalTask>(
+    task: T,
+  ): task is T & LocalTaskWithLocation {
+    const location = task.location as
+      | LocalTaskWithLocation["location"]
+      | undefined;
+
+    return Boolean(
+      location &&
+        typeof location.path === "string" &&
+        typeof location.position?.start?.line === "number",
+    );
+  }
+
+  function revealTaskInFile(task: LocalTask) {
+    if (!hasTaskLocation(task)) {
+      return;
+    }
+
+    const {
+      location: {
+        path,
+        position: {
+          start: { line },
+        },
+      },
+    } = task;
+
+    void workspaceFacade.revealLineInFile(path, line);
+  }
+
+  function showTimeBlockMenu(event: MouseEvent, task: LocalTask) {
+    if (!hasTaskLocation(task)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    createTimeBlockMenu({ event, task, workspaceFacade });
+  }
 
   const displayedTasksForTimeline = $derived(getDisplayedTasksForTimeline(day));
   const displayedTasksWithClocksForTimeline = $derived(
@@ -131,7 +182,15 @@
     <div class="tasks absolute-stretch-x">
       {#each $displayedTasksWithClocksForTimeline as task (getRenderKey(task))}
         <PositionedTimeBlock {task}>
-          <LocalTimeBlock {task} />
+          <LocalTimeBlock
+            ondblclick={() => {
+              revealTaskInFile(task);
+            }}
+            oncontextmenu={(event) => {
+              showTimeBlockMenu(event, task);
+            }}
+            {task}
+          />
         </PositionedTimeBlock>
       {/each}
     </div>
