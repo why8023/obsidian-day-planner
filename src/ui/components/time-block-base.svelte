@@ -13,9 +13,18 @@
     task: Task;
     use?: ActionArray;
     onpointerup?: (event: PointerEvent) => void;
+    oncontextmenu?: (event: MouseEvent) => void;
+    ondblclick?: (event: MouseEvent) => void;
   }
 
-  const { onpointerup, children, task, use = [] }: Props = $props();
+  const {
+    onpointerup,
+    oncontextmenu,
+    ondblclick,
+    children,
+    task,
+    use = [],
+  }: Props = $props();
 
   const { isDarkMode, settingsSignal } = getObsidianContext();
 
@@ -44,6 +53,8 @@
       task.truncated?.includes("right") && "truncated-right",
       task.truncated?.includes("bottom") && "truncated-bottom",
     ]}
+    {oncontextmenu}
+    {ondblclick}
     {onpointerup}
     use:useActions={use}
   >

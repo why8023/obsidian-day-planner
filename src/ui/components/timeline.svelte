@@ -6,6 +6,7 @@
   import { getObsidianContext } from "../../context/obsidian-context";
   import { isToday } from "../../global-store/current-time";
   import { getVisibleHours, snap } from "../../global-store/derived-settings";
+  import type { LocalTask } from "../../task-types";
   import {
     getIsomorphicClientY,
     isTouchEvent,
@@ -14,6 +15,7 @@
   import { minutesToMomentOfDay } from "../../util/moment";
   import { getRenderKey } from "../../util/task-utils";
   import { createGestures } from "../actions/gestures";
+  import { createTimeBlockMenu } from "../time-block-menu";
 
   import Column from "./column.svelte";
   import LocalTimeBlock from "./local-time-block.svelte";
@@ -37,6 +39,7 @@
     pointerDateTime,
     getDisplayedTasksWithClocksForTimeline,
     settingsSignal,
+    workspaceFacade,
   } = getObsidianContext();
 
   const displayedTasksForTimeline = $derived(getDisplayedTasksForTimeline(day));
@@ -70,6 +73,29 @@
   function handleContainerPointerDown(event: MouseEvent | TouchEvent) {
     updatePointerDateTime(event);
     handleContainerMouseDown();
+  }
+
+  async function revealTaskInFile(task: LocalTask) {
+    const location = task.location;
+
+    if (!location) {
+      return;
+    }
+
+    await workspaceFacade.revealLineInFile(
+      location.path,
+      location.position.start.line,
+    );
+  }
+
+  function showTaskContextMenu(event: MouseEvent, task: LocalTask) {
+    if (!task.location) {
+      return;
+    }
+
+    event.preventDefault();
+
+    createTimeBlockMenu({ event, task, workspaceFacade });
   }
 
   const timelineGestures = createGestures({
@@ -131,7 +157,11 @@
     <div class="tasks absolute-stretch-x">
       {#each $displayedTasksWithClocksForTimeline as task (getRenderKey(task))}
         <PositionedTimeBlock {task}>
-          <LocalTimeBlock {task} />
+          <LocalTimeBlock
+            oncontextmenu={(event) => showTaskContextMenu(event, task)}
+            ondblclick={() => void revealTaskInFile(task)}
+            {task}
+          />
         </PositionedTimeBlock>
       {/each}
     </div>
