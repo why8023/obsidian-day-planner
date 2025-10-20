@@ -6,6 +6,7 @@
   import { getObsidianContext } from "../../context/obsidian-context";
   import { isToday } from "../../global-store/current-time";
   import { getVisibleHours, snap } from "../../global-store/derived-settings";
+  import type { LocalTask, WithPlacing } from "../../task-types";
   import {
     getIsomorphicClientY,
     isTouchEvent,
@@ -14,6 +15,7 @@
   import { minutesToMomentOfDay } from "../../util/moment";
   import { getRenderKey } from "../../util/task-utils";
   import { createGestures } from "../actions/gestures";
+  import { createTimeBlockMenu } from "../time-block-menu";
 
   import Column from "./column.svelte";
   import LocalTimeBlock from "./local-time-block.svelte";
@@ -37,6 +39,7 @@
     pointerDateTime,
     getDisplayedTasksWithClocksForTimeline,
     settingsSignal,
+    workspaceFacade,
   } = getObsidianContext();
 
   const displayedTasksForTimeline = $derived(getDisplayedTasksForTimeline(day));
@@ -88,6 +91,37 @@
     onpanend: confirmEdit,
     options: { mouseSupport: false },
   });
+
+  function revealTaskInFile(task: WithPlacing<LocalTask>) {
+    const location = task.location;
+    const line = location?.position?.start?.line;
+
+    if (!location || typeof line !== "number") {
+      return;
+    }
+
+    void workspaceFacade.revealLineInFile(location.path, line);
+  }
+
+  function handleClockTaskContextMenu(
+    event: Event,
+    task: WithPlacing<LocalTask>,
+  ) {
+    const { location } = task;
+
+    if (!location) {
+      return;
+    }
+
+    if (!(event instanceof MouseEvent)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    createTimeBlockMenu({ event, task, workspaceFacade });
+  }
 </script>
 
 {#if $settings.timelineColumns.planner}
@@ -131,7 +165,11 @@
     <div class="tasks absolute-stretch-x">
       {#each $displayedTasksWithClocksForTimeline as task (getRenderKey(task))}
         <PositionedTimeBlock {task}>
-          <LocalTimeBlock {task} />
+          <LocalTimeBlock
+            {task}
+            on:contextmenu={(event) => handleClockTaskContextMenu(event, task)}
+            on:dblclick={() => revealTaskInFile(task)}
+          />
         </PositionedTimeBlock>
       {/each}
     </div>
