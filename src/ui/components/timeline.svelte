@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Moment } from "moment";
+  import type { LocalTask } from "../../task-types";
   import { get } from "svelte/store";
   import { isNotVoid } from "typed-assert";
 
@@ -14,6 +15,7 @@
   import { minutesToMomentOfDay } from "../../util/moment";
   import { getRenderKey } from "../../util/task-utils";
   import { createGestures } from "../actions/gestures";
+  import { createTimeBlockMenu } from "../time-block-menu";
 
   import Column from "./column.svelte";
   import LocalTimeBlock from "./local-time-block.svelte";
@@ -37,6 +39,7 @@
     pointerDateTime,
     getDisplayedTasksWithClocksForTimeline,
     settingsSignal,
+    workspaceFacade,
   } = getObsidianContext();
 
   const displayedTasksForTimeline = $derived(getDisplayedTasksForTimeline(day));
@@ -88,6 +91,33 @@
     onpanend: confirmEdit,
     options: { mouseSupport: false },
   });
+
+  async function revealTaskLocation(task: LocalTask) {
+    const location = task.location;
+
+    if (!location) {
+      return;
+    }
+
+    const {
+      path,
+      position: {
+        start: { line },
+      },
+    } = location;
+
+    await workspaceFacade.revealLineInFile(path, line);
+  }
+
+  function handleTaskContextMenu(event: MouseEvent, task: LocalTask) {
+    if (!task.location) {
+      return;
+    }
+
+    event.preventDefault();
+
+    createTimeBlockMenu({ event, task, workspaceFacade });
+  }
 </script>
 
 {#if $settings.timelineColumns.planner}
@@ -131,7 +161,11 @@
     <div class="tasks absolute-stretch-x">
       {#each $displayedTasksWithClocksForTimeline as task (getRenderKey(task))}
         <PositionedTimeBlock {task}>
-          <LocalTimeBlock {task} />
+          <LocalTimeBlock
+            ondblclick={() => void revealTaskLocation(task)}
+            oncontextmenu={(event) => handleTaskContextMenu(event, task)}
+            {task}
+          />
         </PositionedTimeBlock>
       {/each}
     </div>
