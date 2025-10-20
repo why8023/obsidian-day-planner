@@ -14,12 +14,16 @@
     isActive = false,
     use = [],
     onpointerup,
+    oncontextmenu,
+    ondblclick,
   }: {
     isActive?: boolean;
     task: LocalTask;
     bottomDecoration?: Snippet;
     use?: HTMLActionArray;
     onpointerup?: (event: PointerEvent) => void;
+    oncontextmenu?: (event: MouseEvent) => void;
+    ondblclick?: (event: MouseEvent) => void;
   } = $props();
 </script>
 
@@ -28,6 +32,8 @@
   --time-block-box-shadow={isActive
     ? "var(--shadow-stationary), var(--shadow-border-accent)"
     : ""}
+  {oncontextmenu}
+  {ondblclick}
   {onpointerup}
   {task}
   use={[...use, hoverPreview(task)]}
