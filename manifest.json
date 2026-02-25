@@ -1,6 +1,6 @@
 {
-  "id": "obsidian-day-planner",
-  "name": "Day Planner",
+  "id": "obsidian-day-planner-why",
+  "name": "Day Planner why",
   "version": "0.28.0",
   "minAppVersion": "0.16.0",
   "description": "A day planner with clean UI and readable syntax",
